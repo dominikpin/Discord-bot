@@ -8,6 +8,6 @@ public class MessageEventListener extends ListenerAdapter {
     public void onMessageReceived(MessageReceivedEvent event) {
         super.onMessageReceived(event);
 
-        System.out.println("user:" + event.getMessage().getContentRaw());
+        System.out.println(event.getAuthor().getName() + ": " + event.getMessage().getContentRaw());
     }
 }
