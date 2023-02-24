@@ -1,7 +1,12 @@
 package org.example.events;
 
+import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
+import net.dv8tion.jda.api.events.guild.voice.GenericGuildVoiceEvent;
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceMuteEvent;
+import net.dv8tion.jda.api.events.guild.voice.GuildVoiceUpdateEvent;
+import net.dv8tion.jda.api.events.session.ReadyEvent;
+
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
@@ -19,6 +24,39 @@ public class AFKListener extends ListenerAdapter {
     private static Guild guild = null;
     public AFKListener() {
         timer.schedule(new addOneSecond(), 0, 1000);
+    }
+
+    @Override
+    public void onReady(ReadyEvent event) {
+        if (event.getJDA().getGuildById("622504554428235806") != null) {
+            checkMutedUsers(event.getJDA().getGuildById("622504554428235806"));
+        }
+    }
+
+    public void checkMutedUsers(Guild guild) {
+        for (VoiceChannel voiceChannel : guild.getVoiceChannels()) {
+            for (Member member : voiceChannel.getMembers()) {
+                if (member.getVoiceState().isMuted()) {
+                    //System.out.printf("%s is muted in %s%n", member.getEffectiveName(), voiceChannel.getName());
+                    saveUser(member.getUser().getId());
+                }
+            }
+        }
+    }
+
+    @Override
+    public void onGenericGuildVoice(GenericGuildVoiceEvent event) {
+        if (event.getMember().getUser().isBot()) {
+            return; // Ignore bot users
+        }
+        if (event instanceof GuildVoiceUpdateEvent) {
+            //System.out.println(event.getMember().getUser().getId());
+            if (event.getVoiceState().isMuted()) {
+                //System.out.printf("%s muted themselves in %s%n", event.getMember().getUser().getName(), event.getVoiceState().getChannel().getName());
+                saveUser(event.getMember().getUser().getId());
+                return;
+            }
+        }
     }
 
     @Override
@@ -62,9 +100,9 @@ public class AFKListener extends ListenerAdapter {
                 }
                 Users.put(user.getKey(), user.getValue()+1);
             }
-            //for (Map.Entry<String, Integer> entry : Users.entrySet()) {
-            //    System.out.println(entry.getKey() + " => " + entry.getValue());
-            //}
+            for (Map.Entry<String, Integer> entry : Users.entrySet()) {
+                System.out.println(entry.getKey() + " => " + entry.getValue());
+            }
         }
     }
 
