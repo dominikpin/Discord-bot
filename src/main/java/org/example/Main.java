@@ -33,7 +33,7 @@ public class Main {
         JDABuilder jdaBuilder = JDABuilder.createDefault(TOKEN);
         jdaBuilder
                 .enableIntents(GatewayIntent.MESSAGE_CONTENT, GatewayIntent.GUILD_MESSAGES)
-                .addEventListeners(new ReadyEventListener(), new UrbanDictionaryBotEvent(), new DeafenListener(), new AFKListener(),  new ShutdownBotCommand(OWNER_ID))
+                .addEventListeners(new ReadyEventListener(), new UrbanDictionaryBotEvent(), new DeafenListener(), new AFKListener(),  new ShutdownBotCommand(OWNER_ID), new TriviaQuizEvent())
                 .build();
 
         // Delete lock file on shutdown
