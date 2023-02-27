@@ -1,22 +1,22 @@
 package org.example.events;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.List;
-import java.util.Objects;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
-public class UrbanDictionaryBot extends ListenerAdapter {
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 
-    private static final String API_URL = "https://mashape-community-urban-dictionary.p.rapidapi.com/define?term=";
-    private static final String API_KEY = "acbab4be1amshdb0245055ce3333p194689jsn0c98dd77baa6";
+public class UrbanDictionaryBotEvent extends ListenerAdapter {
+
+    private static final String API_URL = "https://urban-dictionary7.p.rapidapi.com/v0/define?term=";
+    private static final String API_KEY = "386dd7fef6mshc7279ae2ec65aafp1cdec1jsnc2a2d0355e3a";
 
     @Override
     public void onMessageReceived(MessageReceivedEvent event) {
@@ -27,7 +27,14 @@ public class UrbanDictionaryBot extends ListenerAdapter {
                 return;
             }
             String word = message[1];
-            String definition = getDefinition(word);
+            //System.out.println(word);
+            String definition = null;
+            try {
+                definition = getDefinition(word);
+            } catch (IOException | InterruptedException e) {
+                e.printStackTrace();
+            }
+            //System.out.println(definition);
             if (definition == null) {
                 event.getChannel().sendMessage("Sorry, I couldn't find a definition for that word.").queue();
             } else {
@@ -36,35 +43,24 @@ public class UrbanDictionaryBot extends ListenerAdapter {
         }
     }
 
-    private String getDefinition(String word) {
-        HttpClient httpClient = HttpClient.newHttpClient();
-        HttpRequest httpRequest = HttpRequest.newBuilder()
+    private String getDefinition(String word) throws IOException, InterruptedException {
+
+
+        HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(API_URL + word))
                 .header("X-RapidAPI-Key", API_KEY)
-                .header("X-RapidAPI-Host", "mashape-community-urban-dictionary.p.rapidapi.com")
+                .header("X-RapidAPI-Host", "urban-dictionary7.p.rapidapi.com")
+                .method("GET", HttpRequest.BodyPublishers.noBody())
                 .build();
-        try {
-            HttpResponse<String> httpResponse = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
-            JSONObject jsonResponse = new JSONObject(httpResponse.body());
-            JSONArray definitionsArray = jsonResponse.getJSONArray("list");
-            if (definitionsArray.length() == 0) {
-                return null;
-            } else {
-                JSONObject firstDefinition = definitionsArray.getJSONObject(0);
-                String definition = firstDefinition.getString("definition");
-                JSONArray exampleArray = firstDefinition.getJSONArray("example");
-                List<String> exampleList = new ArrayList<>();
-                for (int i = 0; i < exampleArray.length(); i++) {
-                    exampleList.add(exampleArray.getString(i));
-                }
+        HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+        //System.out.println(response.body());
+        JsonObject jsonObject = new Gson().fromJson(response.body(), JsonObject.class);
+        JsonArray list = jsonObject.getAsJsonArray("list");
+        JsonObject firstItem = list.get(0).getAsJsonObject();
+        String firstDefinition = firstItem.get("definition").getAsString();
 
-                String examples = String.join("\n", exampleList);
-                return definition + "\n\nExamples:\n" + examples;
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
+        // Get the "definition" value from the first object in the "list" array
+
+        return firstDefinition;
     }
-
 }

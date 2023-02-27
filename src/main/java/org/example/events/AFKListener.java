@@ -1,6 +1,5 @@
 package org.example.events;
 
-import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
 import net.dv8tion.jda.api.events.guild.voice.GenericGuildVoiceEvent;
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceMuteEvent;
@@ -9,34 +8,43 @@ import net.dv8tion.jda.api.events.session.ReadyEvent;
 
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.entities.*;
-import net.dv8tion.jda.api.entities.GuildVoiceState;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 
 public class AFKListener extends ListenerAdapter {
     public static Map<String, Integer> Users = new HashMap<>();
+    private static final String AFK_CHANNEL_ID = "944268108145754164";
+    private static final String GUILD_ID = "622504554428235806";
+    private static Guild guild = null;
 
     public Timer timer = new Timer();
-    private static Guild guild = null;
+
     public AFKListener() {
         timer.schedule(new addOneSecond(), 0, 1000);
     }
 
     @Override
     public void onReady(ReadyEvent event) {
-        if (event.getJDA().getGuildById("622504554428235806") != null) {
-            checkMutedUsers(event.getJDA().getGuildById("622504554428235806"));
+        guild = event.getJDA().getGuildById(GUILD_ID);
+        if (guild != null) {
+            checkMutedUsers(guild);
         }
     }
 
-    public void checkMutedUsers(Guild guild) {
+    public void checkMutedUsers(Guild Guild) {
+        VoiceChannel afkChannel = guild.getVoiceChannelById(AFK_CHANNEL_ID);
+        if (afkChannel == null) {
+            return;
+        }
         for (VoiceChannel voiceChannel : guild.getVoiceChannels()) {
             for (Member member : voiceChannel.getMembers()) {
                 if (member.getVoiceState().isMuted()) {
+                    if (member.getUser().isBot()) {
+                        continue;
+                    }
+                    if (member.getVoiceState().getChannel().asVoiceChannel().equals(afkChannel)) {
+                        continue;
+                    }
                     //System.out.printf("%s is muted in %s%n", member.getEffectiveName(), voiceChannel.getName());
                     saveUser(member.getUser().getId());
                 }
@@ -46,18 +54,30 @@ public class AFKListener extends ListenerAdapter {
 
     @Override
     public void onGenericGuildVoice(GenericGuildVoiceEvent event) {
+        guild = event.getGuild();
+        VoiceChannel afkChannel = guild.getVoiceChannelById(AFK_CHANNEL_ID);
         if (event.getMember().getUser().isBot()) {
-            return; // Ignore bot users
+            return;
+        }
+        if (event.getVoiceState().getChannel() == null) {
+            return;
+        }
+        if (!(event.getVoiceState().getChannel() instanceof VoiceChannel)) {
+            return;
+        }
+        if ((event.getVoiceState().getChannel().asVoiceChannel()).equals(afkChannel)) {
+            removeUser(event.getMember().getUser().getId());
+            return;
         }
         if (event instanceof GuildVoiceUpdateEvent) {
             //System.out.println(event.getMember().getUser().getId());
             if (event.getVoiceState().isMuted()) {
                 //System.out.printf("%s muted themselves in %s%n", event.getMember().getUser().getName(), event.getVoiceState().getChannel().getName());
                 saveUser(event.getMember().getUser().getId());
-                return;
             }
         }
     }
+    
 
     @Override
     public void onGuildVoiceMute(GuildVoiceMuteEvent event) {
@@ -65,9 +85,10 @@ public class AFKListener extends ListenerAdapter {
             return; // Ignore bot users
         }
         guild = event.getGuild();
-        VoiceChannel afkChannel = guild.getVoiceChannelsByName("afk", true).stream().findFirst().orElse(null);
+        VoiceChannel afkChannel = guild.getVoiceChannelById(AFK_CHANNEL_ID);
         VoiceChannel currentChannel = event.getMember().getVoiceState().getChannel().asVoiceChannel();
         if (currentChannel.equals(afkChannel)) {
+            removeUser(event.getMember().getUser().getId());
             // Member is already in the AFK channel
             return;
         }
@@ -91,8 +112,9 @@ public class AFKListener extends ListenerAdapter {
 
     private static class addOneSecond extends TimerTask {
         public void run() {
-            for (Map.Entry<String, Integer> user : Users.entrySet()) {
-                if (user.getValue().equals(600)) {
+            Map<String, Integer> usersCopy = new HashMap<>(Users); // create a copy of the Users map
+            for (Map.Entry<String, Integer> user : usersCopy.entrySet()) {
+                if (user.getValue().equals(60)) {
                     removeUser(user.getKey());
                     //System.out.println("1");
                     moveToAfkVoiceChannel(user.getKey());
@@ -100,9 +122,9 @@ public class AFKListener extends ListenerAdapter {
                 }
                 Users.put(user.getKey(), user.getValue()+1);
             }
-            for (Map.Entry<String, Integer> entry : Users.entrySet()) {
-                System.out.println(entry.getKey() + " => " + entry.getValue());
-            }
+            //for (Map.Entry<String, Integer> entry : Users.entrySet()) {
+            //    System.out.println(entry.getKey() + " => " + entry.getValue());
+            //}
         }
     }
 
@@ -113,7 +135,7 @@ public class AFKListener extends ListenerAdapter {
             return;
         }
         //System.out.println("3");
-        Member member = (Member) guild.getMemberById(username);
+        Member member = guild.getMemberById(username);
         if (member == null) {
             // Member not found
             return;
@@ -124,13 +146,12 @@ public class AFKListener extends ListenerAdapter {
             return;
         }
         //System.out.println("5");
-        VoiceChannel afkChannel = guild.getVoiceChannelsByName("afk", true).stream().findFirst().orElse(null);
+        VoiceChannel afkChannel = guild.getVoiceChannelById(AFK_CHANNEL_ID);
         if (afkChannel == null) {
             // AFK channel not found
             return;
         }
         //System.out.println("6");
-        GuildVoiceState voiceState = member.getVoiceState();
         VoiceChannel currentChannel = member.getVoiceState().getChannel().asVoiceChannel();
 
         if (currentChannel.equals(afkChannel)) {

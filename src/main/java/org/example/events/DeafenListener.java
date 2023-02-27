@@ -12,7 +12,7 @@ public class DeafenListener extends ListenerAdapter {
         }
         if (event.getVoiceState().isDeafened()) {
             //System.out.printf("%s has deafened themselves in %s%n", event.getMember().getEffectiveName(), event.getVoiceState().getChannel().getName());
-            if(event.getMember().getUser().getName().equals("zalbx")) {
+            if(event.getMember().getUser().getId().equals("303442341212061696")) {
                 String currentNickname = event.getMember().getNickname();
                 String NewNickname = currentNickname;
                 int numericInt = Integer.parseInt(currentNickname.replaceAll("\\D+", ""));
