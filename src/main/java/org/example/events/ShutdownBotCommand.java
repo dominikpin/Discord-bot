@@ -15,6 +15,7 @@ public class ShutdownBotCommand extends ListenerAdapter {
 
     @Override
     public void onMessageReceived(MessageReceivedEvent event) {
+        super.onMessageReceived(event);
         if (event.getAuthor().getId().equals(ownerId) && event.getMessage().getContentRaw().equals("!shutdown")) {
             System.out.println("Shutting down...");
             CompletableFuture<Message> future = event.getChannel().sendMessage("Shutting down...").submit();

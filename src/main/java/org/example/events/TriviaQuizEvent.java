@@ -7,6 +7,9 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Timer;
 import java.util.TimerTask;
+
+import org.example.Main;
+
 import java.util.Random;
 
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
@@ -19,7 +22,7 @@ import com.google.gson.JsonArray;
 public class TriviaQuizEvent extends ListenerAdapter {
 
     private static final String API_URL = "https://trivia-by-api-ninjas.p.rapidapi.com/v1/trivia?";
-    private static final String API_KEY = "386dd7fef6mshc7279ae2ec65aafp1cdec1jsnc2a2d0355e3a";
+    private static final String API_KEY = Main.API_KEY;
     private boolean triviaActive = false;
     private boolean found = false;
     private TextChannel currentTriviaChannel = null;
@@ -71,7 +74,7 @@ public class TriviaQuizEvent extends ListenerAdapter {
                 }
             }
             if (message[1].equals("help")) {
-                currentTriviaChannel.sendMessage("Here are the available commands for !trivia:\n\n!trivia - Starts a new trivia game and chooses random category.\n!trivia [category] - Starts a new trivia game. These are the categories: *artliterature, language, sciencenature, general, fooddrink, peopleplaces, geography, historyholidays, entertainment, toysgames, music, mathematics, religionmythology, sportsleisure.*\n!trivia stop - Stops the current trivia game.\n!trivia help - Shows this help message.\n\nDuring a trivia game, you can answer questions by typing your answer in the chat. The bot will let you know if your answer is correct or incorrect.\n\nGood luck and have fun!").queue();
+                currentTriviaChannel.sendMessage("Here are the available commands for !trivia:\n\n!trivia - Starts a new trivia game and chooses random category.\n!trivia [category] - Starts a new trivia game. These are the categories: *artliterature, language, sciencenature, general, fooddrink, peopleplaces, geography, historyholidays, entertainment, toysgames, music, mathematics, religionmythology, sportsleisure.*\n!trivia stop - Stops the current trivia game.\n!trivia help - Shows this help message.\n([] are not needed in commands)\n\nDuring a trivia game, you can answer questions by typing your answer in the chat. The bot will let you know if your answer is correct or incorrect.\n\nGood luck and have fun!").queue();
                 return;
             }
             if (!triviaActive) {
@@ -112,6 +115,7 @@ public class TriviaQuizEvent extends ListenerAdapter {
     }
 
     private static String[] getTrivia(String category) throws IOException, InterruptedException {
+        
         String currentURL = API_URL;
         if (category.equals("")) {
             currentURL += "limit=30";
@@ -127,7 +131,7 @@ public class TriviaQuizEvent extends ListenerAdapter {
 		.build();
         HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
         //System.out.println(response.body());
-        int randomNumber = rand.nextInt(30) + 1;
+        int randomNumber = rand.nextInt(30);
         String question = new Gson().fromJson(response.body(), JsonArray.class).get(randomNumber).getAsJsonObject().get("question").getAsString();
         String answer = new Gson().fromJson(response.body(), JsonArray.class).get(randomNumber).getAsJsonObject().get("answer").getAsString();
         String[] Question = {question, answer};
@@ -144,13 +148,18 @@ public class TriviaQuizEvent extends ListenerAdapter {
             currentTriviaChannel.sendMessage("**" + trivia[0] + "**").queue();
             //System.out.println(trivia[1]);
             task1 = new TimerTask() {
-                int TimeLeft = 30;
+                int TimeLeft = 31;
+                String sentMessageId = "";
                 @Override
                 public void run() {
-                    if (TimeLeft % 5 == 0) {
-                        currentTriviaChannel.sendMessage(TimeLeft + " second/s left").queue();
-                    }
                     TimeLeft--;
+                    if (TimeLeft == 30) {
+                        currentTriviaChannel.sendMessage(TimeLeft + " second/s left").queue(message -> {
+                            sentMessageId = message.getId();
+                        });
+                    } else {
+                        currentTriviaChannel.editMessageById(sentMessageId, TimeLeft + " second/s left").queue();
+                    }
                     if (TimeLeft == 0) {
                         currentTriviaChannel.sendMessage("**No time left, the answer is " + trivia[1] + "**").queue();
                         triviaActive = false;
@@ -165,13 +174,18 @@ public class TriviaQuizEvent extends ListenerAdapter {
     }
 
     TimerTask task1 = new TimerTask() {
-        int TimeLeft = 30;
+        int TimeLeft = 31;
+        String sentMessageId = "";
         @Override
         public void run() {
-            if (TimeLeft % 5 == 0) {
-                currentTriviaChannel.sendMessage(TimeLeft + " second/s left").queue();
-            }
             TimeLeft--;
+            if (TimeLeft == 30) {
+                currentTriviaChannel.sendMessage(TimeLeft + " second/s left").queue(message -> {
+                    sentMessageId = message.getId();
+                });
+            } else {
+                currentTriviaChannel.editMessageById(sentMessageId, TimeLeft + " second/s left").queue();
+            }
             if (TimeLeft == 0) {
                 currentTriviaChannel.sendMessage("**No time left, the answer is " + trivia[1] + "**").queue();
             }

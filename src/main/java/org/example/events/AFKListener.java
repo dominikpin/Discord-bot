@@ -11,10 +11,12 @@ import net.dv8tion.jda.api.entities.*;
 
 import java.util.*;
 
+import org.example.Main;
+
 public class AFKListener extends ListenerAdapter {
     public static Map<String, Integer> Users = new HashMap<>();
-    private static final String AFK_CHANNEL_ID = "944268108145754164";
-    private static final String GUILD_ID = "622504554428235806";
+    private static final String AFK_CHANNEL_ID = Main.AFK_CHANNEL_ID;
+    private static final String GUILD_ID = Main.GUILD_ID;
     private static Guild guild = null;
 
     public Timer timer = new Timer();

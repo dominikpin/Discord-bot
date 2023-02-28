@@ -6,6 +6,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
+import org.example.Main;
+
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
@@ -16,7 +18,7 @@ import com.google.gson.JsonObject;
 public class UrbanDictionaryBotEvent extends ListenerAdapter {
 
     private static final String API_URL = "https://urban-dictionary7.p.rapidapi.com/v0/define?term=";
-    private static final String API_KEY = "386dd7fef6mshc7279ae2ec65aafp1cdec1jsnc2a2d0355e3a";
+    private static final String API_KEY = Main.API_KEY;
 
     @Override
     public void onMessageReceived(MessageReceivedEvent event) {

@@ -4,12 +4,22 @@ import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import org.example.events.*;
 
+import io.github.cdimascio.dotenv.Dotenv;
+
 import java.io.File;
 import java.io.IOException;
 
 public class Main {
-    private static final String LOCK_FILE_PATH = "C:\\Users\\D\\IdeaProjects\\discord-bot\\bot.lock";
-    private static final String OWNER_ID = "433690506783096834";
+    // Load environment variables from .env file
+    private static Dotenv dotenv = Dotenv.load();
+
+    private static final String LOCK_FILE_PATH = dotenv.get("LOCK_FILE_PATH");
+    private static final String OWNER_ID = dotenv.get("OWNER_ID");
+    private static final String TOKEN = dotenv.get("DISCORD_TOKEN");
+    public static final String AFK_CHANNEL_ID = dotenv.get("AFK_CHANNEL_ID");
+    public static final String GUILD_ID = dotenv.get("GUILD_ID");
+    public static final String API_KEY = dotenv.get("API_KEY");
+
 
     public static void main(String[] args) {
         // Check for lock file
@@ -29,7 +39,6 @@ public class Main {
         }
 
         // Start bot
-        final String TOKEN = "MTA3NzY3OTc1NzQ0Mjk2MTUzOQ.GDhpas.UZEQEpQB8UplKI5hVzTVssraKZSIDwP-qyFkb8";
         JDABuilder jdaBuilder = JDABuilder.createDefault(TOKEN);
         jdaBuilder
                 .enableIntents(GatewayIntent.MESSAGE_CONTENT, GatewayIntent.GUILD_MESSAGES)
