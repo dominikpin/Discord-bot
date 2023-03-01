@@ -34,7 +34,7 @@ public class Main {
         // Create lock file
         try {
             lockFile.createNewFile();
-            System.out.println("Bot started.");
+            //System.out.println("Bot started.");
         } catch (IOException e) {
             System.out.println("Failed to create lock file.");
             return;
