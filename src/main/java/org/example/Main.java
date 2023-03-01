@@ -19,6 +19,8 @@ public class Main {
     public static final String AFK_CHANNEL_ID = dotenv.get("AFK_CHANNEL_ID");
     public static final String GUILD_ID = dotenv.get("GUILD_ID");
     public static final String API_KEY = dotenv.get("API_KEY");
+    public static final String ZALBIK_ID = dotenv.get("ZALBIK_ID");
+    public static final String PREFIX_FILE_PATH = dotenv.get("PREFIX_FILE_PATH");
 
 
     public static void main(String[] args) {
@@ -42,7 +44,7 @@ public class Main {
         JDABuilder jdaBuilder = JDABuilder.createDefault(TOKEN);
         jdaBuilder
                 .enableIntents(GatewayIntent.MESSAGE_CONTENT, GatewayIntent.GUILD_MESSAGES)
-                .addEventListeners(new ReadyEventListener(), new UrbanDictionaryBotEvent(), new DeafenListener(), new AFKListener(),  new ShutdownBotCommand(OWNER_ID), new TriviaQuizEvent())
+                .addEventListeners(new ReadyEventListener(), new UrbanDictionaryBotEvent(), new DeafenListener(), new AFKListener(),  new ShutdownBotCommand(OWNER_ID), new TriviaQuizEvent(), new PrefixChangeEvent())
                 .build();
 
         // Delete lock file on shutdown

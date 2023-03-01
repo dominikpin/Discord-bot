@@ -116,7 +116,7 @@ public class AFKListener extends ListenerAdapter {
         public void run() {
             Map<String, Integer> usersCopy = new HashMap<>(Users); // create a copy of the Users map
             for (Map.Entry<String, Integer> user : usersCopy.entrySet()) {
-                if (user.getValue().equals(60)) {
+                if (user.getValue().equals(600)) {
                     removeUser(user.getKey());
                     //System.out.println("1");
                     moveToAfkVoiceChannel(user.getKey());

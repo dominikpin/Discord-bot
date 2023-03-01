@@ -19,11 +19,16 @@ public class UrbanDictionaryBotEvent extends ListenerAdapter {
 
     private static final String API_URL = "https://urban-dictionary7.p.rapidapi.com/v0/define?term=";
     private static final String API_KEY = Main.API_KEY;
+    private static String PREFIX = PrefixChangeEvent.PREFIX;
+
+    public static void updatePrefix(String newPrefix) {
+        PREFIX = newPrefix;
+    }
 
     @Override
     public void onMessageReceived(MessageReceivedEvent event) {
         String[] message = event.getMessage().getContentRaw().split("\\s+");
-        if (message[0].equalsIgnoreCase("!define")) {
+        if (message[0].equalsIgnoreCase(PREFIX + "define")) {
             if (message.length < 2) {
                 event.getChannel().sendMessage("Please specify a word to define.").queue();
                 return;
