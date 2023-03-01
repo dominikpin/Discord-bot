@@ -1,4 +1,4 @@
 # Discord-bot
-This is my implementation of a discord bot - still work in progress.
+This is my implementation of a Discord bot, still a work in progress. 
 
-Anyone that comes across this code is free to copy whatevere thy want. Hope it helps with your doscord bot.
+Anyone who comes across this code is free to copy whatever they want. I hope it helps with your Discord bot.
