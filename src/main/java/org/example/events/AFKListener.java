@@ -2,8 +2,6 @@ package org.example.events;
 
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
 import net.dv8tion.jda.api.events.guild.voice.GenericGuildVoiceEvent;
-import net.dv8tion.jda.api.events.guild.voice.GuildVoiceMuteEvent;
-import net.dv8tion.jda.api.events.guild.voice.GuildVoiceUpdateEvent;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -42,7 +40,6 @@ public class AFKListener extends ListenerAdapter {
 
     // Method checks if any users are already muted when the bot starts up and saves them in Users map
     public void checkMutedUsers(Guild Guild) {
-        VoiceChannel afkChannel = guild.getVoiceChannelById(AFK_CHANNEL_ID);
         if (afkChannel == null) {
             return;
         }
@@ -64,7 +61,6 @@ public class AFKListener extends ListenerAdapter {
     // Method is called whenever a voice state changes in the guild
     @Override
     public void onGenericGuildVoice(GenericGuildVoiceEvent event) {
-        VoiceChannel afkChannel = guild.getVoiceChannelById(AFK_CHANNEL_ID);
         if (event.getMember().getUser().isBot()) {
             return;
         }
@@ -79,40 +75,24 @@ public class AFKListener extends ListenerAdapter {
             removeUser(event.getMember().getUser().getId());
             return;
         }
-        // Saves a user in Users map if user is mutes themselves
-        if (event instanceof GuildVoiceUpdateEvent && event.getVoiceState().isMuted()) {
-            saveUser(event.getMember().getUser().getId());
-        }
-    }
-    
-    // Method is called whenever a voice state changes in the guild
-    @Override
-    public void onGuildVoiceMute(GuildVoiceMuteEvent event) {
-        if (event.getMember().getUser().isBot()) {
-            return;
-        }
-        VoiceChannel currentChannel = event.getMember().getVoiceState().getChannel().asVoiceChannel();
-        // Removes a user from Users map if user is in afk channel
-        if (currentChannel.equals(afkChannel)) {
-            removeUser(event.getMember().getUser().getId());
-            return;
-        }
-        // Saves a user in Users map if user is mutes themselves
-        if (event.getVoiceState().isMuted()) {
+        // Saves a user in Users map if user mutes themselves
+        if (event.getMember().getVoiceState().isMuted()) {
             saveUser(event.getMember().getUser().getId());
             return;
         }
-        // Removes a user from Users map if user is unmutes themselves
+        // Removes a user from Users if user unmutes themselves
         removeUser(event.getMember().getUser().getId());
     }
 
     // Method saves a user in Users
     public static void saveUser(String user) {
         Users.put(user, 0);
+        System.out.println(user + " was saved");
     }
     // Method removes a user from Users
     public static void removeUser(String user) {
         Users.remove(user);
+        System.out.println(user +  " was removed");
     }
 
     // Method increases timer of every user in map Users and if timer hits {AFKTime}, user is moved to afk channel
@@ -142,7 +122,6 @@ public class AFKListener extends ListenerAdapter {
         if (member.getVoiceState() == null || member.getVoiceState().getChannel() == null) {
             return;
         }
-        VoiceChannel afkChannel = guild.getVoiceChannelById(AFK_CHANNEL_ID);
         if (afkChannel == null) {
             return;
         }
