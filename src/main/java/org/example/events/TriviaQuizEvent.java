@@ -14,8 +14,10 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
+import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
 public class TriviaQuizEvent extends ListenerAdapter {
@@ -23,7 +25,11 @@ public class TriviaQuizEvent extends ListenerAdapter {
     // Define constant variables for the API_URL, API_KEY, PREFIX, POSSIBLE_CATEGORIES
     private static final String API_URL = "https://trivia-by-api-ninjas.p.rapidapi.com/v1/trivia?";
     private static String API_KEY;
+    private static String GUILD_ID;
+    private static String TRIVIA_CHANNERL_ID;
     private static String PREFIX;
+    private static Guild guild;
+    private TextChannel triviaChannel;
     private static final String[] POSSIBLE_CATEGORIES = {
             "artliterature", "language", "sciencenature", "general", "fooddrink", "peopleplaces",
             "geography", "historyholidays", "entertainment", "toysgames", "music", "mathematics",
@@ -36,7 +42,6 @@ public class TriviaQuizEvent extends ListenerAdapter {
     // Define variables
     private boolean isTriviaActive = false;
     private boolean found = false;
-    private TextChannel currentTriviaChannel = null;
     private String currentCategory = null;
     private int numberOfStartingQuestions = 0;
     private int numberOfCorrectQuestions = 0;
@@ -45,8 +50,10 @@ public class TriviaQuizEvent extends ListenerAdapter {
     private String[] trivia = new String[]{null, null};
 
     // Constructor that initializes the value of API_KEY
-    public TriviaQuizEvent(String API_KEY) {
+    public TriviaQuizEvent(String API_KEY, String GUILD_ID, String TRIVIA_CHANNERL_ID) {
         TriviaQuizEvent.API_KEY = API_KEY;
+        TriviaQuizEvent.GUILD_ID = GUILD_ID;
+        TriviaQuizEvent.TRIVIA_CHANNERL_ID = TRIVIA_CHANNERL_ID;
     }
 
     // Define a static method for updating the command prefix
@@ -54,10 +61,19 @@ public class TriviaQuizEvent extends ListenerAdapter {
         PREFIX = newPrefix;
     }
 
+    // Method is called when the bot is ready
+    @Override
+    public void onReady(ReadyEvent event) {
+        guild = event.getJDA().getGuildById(GUILD_ID);
+        triviaChannel = guild.getTextChannelById(TRIVIA_CHANNERL_ID);
+    }
+
     // Overriding the onMessageReceived method to handle incoming messages
     @Override
     public void onMessageReceived(MessageReceivedEvent event) {
-        currentTriviaChannel = event.getChannel().asTextChannel();
+        if(!event.getChannel().asTextChannel().equals(triviaChannel)){
+            return;
+        }
         if (event.getMember().getUser().isBot()) {
             return;
         }
@@ -65,51 +81,61 @@ public class TriviaQuizEvent extends ListenerAdapter {
         String[] message = event.getMessage().getContentRaw().split("\\s+");
         // Checking if the first string in the message array is the trivia command
         if (message[0].equals(PREFIX + "trivia")) {
-            handleTriviaCommand(event, message);
+            handleTriviaCommand(message);
             return;
         // Checking if user inputed the right answer in the right text channel
-        } else if (isTriviaActive && currentTriviaChannel.equals(event.getChannel().asTextChannel())) {
+        } else if (isTriviaActive) {
             String userAnswer = event.getMessage().getContentRaw().trim();
             if (userAnswer.equalsIgnoreCase(trivia[1])) {
-                currentTriviaChannel.sendMessage("**The answer " + trivia[1] + " is correct**").queue();
+                triviaChannel.sendMessage("**The answer " + trivia[1] + " is correct**").queue();
                 numberOfCorrectQuestions++;
                 isTriviaActive = false;
-                endQuestion(event);
+                endQuestion();
             }
         }
     }
 
     // Method handles trivia comands
-    public void handleTriviaCommand(MessageReceivedEvent event, String[] message) {
+    public void handleTriviaCommand(String[] message) {
         switch (message.length) {
             // Handles case of !trivia
             case 1:
+                // Checks if there is any active trivia and doesn't start a new game
+                if (isTriviaActive) {
+                    triviaChannel.sendMessage("**Trivia is already in progress**").queue();
+                    return;
+                }
                 numberOfQuestions = 3;
                 numberOfStartingQuestions = 3;
                 currentCategory = "random";
-                tryStartGame(event);
+                tryStartGame();
                 return;    
             // Handles case of !trivia [number, stop, help, next, category]
             case 2:
                 // Handles case !trivia number
                 if (isValidNumber(message[1])) {
+                    // Checks if there is any active trivia and doesn't start a new game
+                    if (isTriviaActive) {
+                        triviaChannel.sendMessage("**Trivia is already in progress**").queue();
+                        return;
+                    }
                     numberOfQuestions = Integer.parseInt(message[1]);
                     numberOfStartingQuestions = Integer.parseInt(message[1]);
                     currentCategory = "random";
-                    tryStartGame(event);
+                    tryStartGame();
                     return;
                 }
                 switch (message[1]) {
                     // Handles case !trivia stop
                     case "stop":
                         if (!isTriviaActive) {
-                            currentTriviaChannel.sendMessage("**There is no trivia in progress**").queue();
+                            triviaChannel.sendMessage("**There is no trivia in progress**").queue();
                             return;
                         }
-                        currentTriviaChannel.sendMessage("**The answer is " + trivia[1] + "**").queue();
-                        currentTriviaChannel.sendMessage("**Trivia Stoped**").queue();
+                        triviaChannel.sendMessage("**The answer is " + trivia[1] + "**").queue();
+                        triviaChannel.sendMessage("**Trivia Stoped**").queue();
                         numberOfQuestions = 0;
-                        endQuestion(event);
+                        endQuestion();
                         return;
                         // Handles case !trivia help
                     case "help":
@@ -121,42 +147,53 @@ public class TriviaQuizEvent extends ListenerAdapter {
                         "([] are not needed in commands)\n\nDuring a trivia game, you can answer questions by typing your answer " +
                         "in the chat. The bot will let you know if your answer is correct or incorrect.\n\n" + 
                         "Good luck and have fun!", PREFIX, PREFIX, Arrays.deepToString(POSSIBLE_CATEGORIES), PREFIX, PREFIX, PREFIX);
-                        currentTriviaChannel.sendMessage(helpMessage).queue();
+                        triviaChannel.sendMessage(helpMessage).queue();
                         return;
                         // Handles case !trivia next
                     case "next":
                         if (!isTriviaActive) {
-                            currentTriviaChannel.sendMessage("**There is no trivia in progress**").queue();
+                            triviaChannel.sendMessage("**There is no trivia in progress**").queue();
                             return;
                         }
                         isTriviaActive = false;
-                        currentTriviaChannel.sendMessage("**The answer is " + trivia[1] + "**").queue();
+                        triviaChannel.sendMessage("**The answer is " + trivia[1] + "**").queue();
                         // If number of questions left in a trivia game are more than 0 it skips to the next question
                         if (numberOfQuestions > 0) {
-                            currentTriviaChannel.sendMessage("**Ending previous trivia question and sending a new one.**").queue();
-                            endQuestion(event);
+                            triviaChannel.sendMessage("**Ending previous trivia question and sending a new one.**").queue();
+                            endQuestion();
                             return;
                         }
                         // If number of questions left in a trivia game are less than 1 it stops the current game and starts a new one with previos settings
-                        currentTriviaChannel.sendMessage("**Ending previous trivia game and stating new one.**").queue();
-                        currentTriviaChannel.sendMessage("**Your score was " + numberOfCorrectQuestions + "/" + numberOfStartingQuestions + "**").queue();
+                        triviaChannel.sendMessage("**Ending previous trivia game and stating new one.**").queue();
+                        triviaChannel.sendMessage("**Your score was " + numberOfCorrectQuestions + "/" + numberOfStartingQuestions + "**").queue();
+                        task1.cancel();
                         numberOfCorrectQuestions = 0;
                         numberOfQuestions = numberOfStartingQuestions;
-                        tryStartGame(event);
+                        tryStartGame();
                         return;
                         // Handles case !trivia category
                     default:
+                        // Checks if there is any active trivia and doesn't start a new game
+                        if (isTriviaActive) {
+                            triviaChannel.sendMessage("**Trivia is already in progress**").queue();
+                            return;
+                        }
                         if (!isValidCategory(message[1])) {
                             return;
                         }
                         numberOfQuestions = 3;
                         numberOfStartingQuestions = 3;
                         currentCategory = message[1];
-                        tryStartGame(event);
+                        tryStartGame();
                         return;
                 }   
             // Handles case !trivia category number
             case 3:
+                // Checks if there is any active trivia and doesn't start a new game
+                if (isTriviaActive) {
+                    triviaChannel.sendMessage("**Trivia is already in progress**").queue();
+                    return;
+                }
                 if (!isValidCategory(message[1])) {
                     return;
                 }
@@ -166,11 +203,11 @@ public class TriviaQuizEvent extends ListenerAdapter {
                 numberOfQuestions = Integer.parseInt(message[2]);
                 numberOfStartingQuestions = Integer.parseInt(message[2]);
                 currentCategory = message[1];
-                tryStartGame(event);
+                tryStartGame();
                 return;
             // Handles any mistyped/wrong commands
             default:
-                currentTriviaChannel.sendMessage("**Wrong command**").queue();
+                triviaChannel.sendMessage("**Wrong command**").queue();
                 return;
         }
     }
@@ -179,7 +216,7 @@ public class TriviaQuizEvent extends ListenerAdapter {
     public boolean isValidNumber(String number) {
         if ((number.chars().allMatch(Character::isDigit))) {
             if (Integer.parseInt(number) < 1) {
-                currentTriviaChannel.sendMessage("Sorry," + number + "is number smaller than 1").queue();
+                triviaChannel.sendMessage("Sorry," + number + "is number smaller than 1").queue();
                 return false;
             }
             return true;
@@ -197,72 +234,64 @@ public class TriviaQuizEvent extends ListenerAdapter {
             }
         }
         if (!found) {
-            currentTriviaChannel.sendMessage("Sorry, I couldn't find the cathegory " + category).queue();
+            triviaChannel.sendMessage("Sorry, I couldn't find the cathegory " + category).queue();
         }
         return found;
     }
 
     // Method calls method startGame if it gets trivia
-    public void tryStartGame(MessageReceivedEvent event) {
+    public void tryStartGame() {
         try {
             trivia = getTrivia(currentCategory);
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
-        startGame(event);
+        startGame();
     }
 
     // Method ends a trivia question or game depending on number of questions left in a game
-    public void endQuestion(MessageReceivedEvent event) {
+    public void endQuestion() {
         task1.cancel();
         if (numberOfQuestions < 1) {
-            currentTriviaChannel.sendMessage("**Your score was " + numberOfCorrectQuestions + "/" + numberOfStartingQuestions + "**").queue();
+            triviaChannel.sendMessage("**Your score was " + numberOfCorrectQuestions + "/" + numberOfStartingQuestions + "**").queue();
             trivia[0] = null;
             trivia[1] = null;
             numberOfStartingQuestions = 0;
             numberOfCorrectQuestions = 0;
-            currentTriviaChannel = null;
             isTriviaActive = false;
             currentCategory = null;
             found = false;
             return;
         }
-        tryStartGame(event);
+        tryStartGame();
     }
 
     // Method starts trivia game
-    public void startGame(MessageReceivedEvent event) {
-        // Checks if there is any active trivia and doesn't start a new game
-        if (isTriviaActive) {
-            currentTriviaChannel.sendMessage("**Trivia is already in progress**").queue();
-            return;
-        }
+    public void startGame() {
         // Checks if trivia got retrived from an API
         if (trivia == null) {
-            currentTriviaChannel.sendMessage("Sorry, I couldn't find any trivia").queue();
+            triviaChannel.sendMessage("Sorry, I couldn't find any trivia").queue();
         }
         numberOfQuestions--;
-        currentTriviaChannel = event.getChannel().asTextChannel();
         isTriviaActive = true;
         // Asks a new trivia question and starts a countdown from 30
-        currentTriviaChannel.sendMessage("**" + trivia[0] + " " + (numberOfStartingQuestions-numberOfQuestions) + "/" + numberOfStartingQuestions + "**").queue();
+        triviaChannel.sendMessage("**" + trivia[0] + " " + (numberOfStartingQuestions-numberOfQuestions) + "/" + numberOfStartingQuestions + "**").queue();
         task1 = new TimerTask() {
             int TimeLeft = 30;
             String sentMessageId = "";
             @Override
             public void run() {
-                TimeLeft--;
                 if (TimeLeft == 30) {
-                    currentTriviaChannel.sendMessage(TimeLeft + " second/s left").queue(message -> {
+                    triviaChannel.sendMessage(TimeLeft + " second/s left").queue(message -> {
                         sentMessageId = message.getId();
                     });
                 } else if (sentMessageId != "") {
-                    currentTriviaChannel.editMessageById(sentMessageId, TimeLeft + " second/s left").queue();
+                    triviaChannel.editMessageById(sentMessageId, TimeLeft + " second/s left").queue();
                 }
                 if (TimeLeft == 0) {
-                    currentTriviaChannel.sendMessage("**No time left, the answer is " + trivia[1] + ".**").queue();
+                    triviaChannel.sendMessage("**No time left, the answer is " + trivia[1] + ".**").queue();
                     isTriviaActive = false;
-                    endQuestion(event);
+                    endQuestion();
                 }
                 TimeLeft--;
             }

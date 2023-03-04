@@ -91,5 +91,6 @@ public class PrefixChangeEvent extends ListenerAdapter{
         ShutdownBotCommand.updatePrefix(newPrefix);
         UrbanDictionaryBotEvent.updatePrefix(newPrefix);
         TriviaQuizEvent.updatePrefix(newPrefix);
+        TicTacToeEvent.updatePrefix(newPrefix);
     }
 }

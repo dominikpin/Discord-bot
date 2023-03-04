@@ -87,12 +87,10 @@ public class AFKListener extends ListenerAdapter {
     // Method saves a user in Users
     public static void saveUser(String user) {
         Users.put(user, 0);
-        System.out.println(user + " was saved");
     }
     // Method removes a user from Users
     public static void removeUser(String user) {
         Users.remove(user);
-        System.out.println(user +  " was removed");
     }
 
     // Method increases timer of every user in map Users and if timer hits {AFKTime}, user is moved to afk channel
