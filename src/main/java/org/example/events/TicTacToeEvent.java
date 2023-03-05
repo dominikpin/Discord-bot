@@ -1,5 +1,7 @@
 package org.example.events;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import net.dv8tion.jda.api.entities.Guild;
@@ -25,7 +27,8 @@ public class TicTacToeEvent extends ListenerAdapter {
     private static String[] Players = {"X", "O"};
     
     private static String[] PlayersIDs = new String[2];
-    private static int currentNumberOfPlayers;
+    private static String ai;
+    private static String human;
     private static boolean isGameInProgress = false;
     private static String sentMessageId;
 
@@ -47,6 +50,7 @@ public class TicTacToeEvent extends ListenerAdapter {
         tictactoeChannel = guild.getTextChannelById(TICTACTOE_CHANNERL_ID);
     }
 
+    @Override
     public void onMessageReceived(MessageReceivedEvent event) {
 
         if(!event.getChannel().asTextChannel().equals(tictactoeChannel)){
@@ -69,7 +73,6 @@ public class TicTacToeEvent extends ListenerAdapter {
             tictactoeChannel.sendMessage("**Wrong command**").queue();
             return;
         }
-        System.out.println(message[1]);
         switch (message[1].toLowerCase()) {
             case "help":
                 String helpMessage = String.format("Here are the available commands for %sTTT:\n\n" +
@@ -99,43 +102,88 @@ public class TicTacToeEvent extends ListenerAdapter {
     public static void startNewGame() {
         tictactoeChannel.sendMessage("**You will have 5 seconds to input answers (or I will ask you again).**").queue();
         resetTheBoard();
-        numberOfPlayers();
-        handleGame(currentNumberOfPlayers);
+        tictactoeChannel.sendMessage("How many players [1/2]?").queue();
+        int currentNumberOfPlayers;
+        while (true) {
+            currentNumberOfPlayers = getNumberFromPlayer();
+            if (currentNumberOfPlayers == 1 || currentNumberOfPlayers == 2) {
+                break;
+            }
+        }
+        if (currentNumberOfPlayers == 1) {
+            handleGameForOne();
+        } else {
+            handleGameForTwo();
+        }
     }
 
-    public static void handleGame(int numberOfPlayers) {    
-        getPlayer(0);
-        if (numberOfPlayers == 2) {
-            getPlayer(1);
+    public static void handleGameForOne() { 
+        tictactoeChannel.sendMessage("Which player do you want to play as?").queue();
+        int whichPlayer;
+        while (true) {
+            whichPlayer = getNumberFromPlayer();
+            if (whichPlayer == 1 || whichPlayer == 2) {
+                break;
+            }
         }
-        tictactoeChannel.sendMessage("**GAME START**").queue();
+        human = Players[whichPlayer-1];
+        PlayersIDs[whichPlayer-1] = getResponse().getAuthor().getId();
         printTheBoard(true);
         for (int i = 0; i < 9; i++) {
             if (i%2 == 0) {
-                int[] input = getInputFromPlayer(0);
-                board[input[0]][input[1]] = Players[0];
+                doMove(i%2);
                 printTheBoard(false);
-                if (checkIfGameOver()) {
-                    tictactoeChannel.sendMessage("**GAME END, player 1 won**").queue();
+                if (checkIfGameOver() != null) {
                     handleGameEnd();
                     return;
                 }
             } else {
-                if (numberOfPlayers == 2) {
-                    int[] input = getInputFromPlayer(1);
-                    board[input[0]][input[1]] = Players[1];
-                } else {
-                    botMove(1);
-                }
+                doMove(i%2);
                 printTheBoard(false);
-                if (checkIfGameOver()) {
-                    tictactoeChannel.sendMessage("**GAME END, player 2 won**").queue();
+                if (checkIfGameOver() != null) {
                     handleGameEnd();
                     return;
                 }
             } 
         }
-        tictactoeChannel.sendMessage("**GAME END, it's a draw**").queue();
+        handleGameEnd();
+        return;
+    }
+
+    public static void doMove(int player) {
+        if (PlayersIDs[player] == null) {
+            ai = Players[player];
+            botMove(player);
+            return;
+        }
+        int[] input = getInputFromPlayer(player);
+        board[input[0]][input[1]] = Players[player];
+    }
+
+    public static void handleGameForTwo() { 
+        getPlayer(0);
+        getPlayer(1);
+        printTheBoard(true);
+        for (int i = 0; i < 9; i++) {
+            if (i%2 == 0) {
+                doMove(i%2);
+                printTheBoard(false);
+                if (!(checkIfGameOver() == null || checkIfGameOver() == "Tie")) {
+                    tictactoeChannel.sendMessage("**GAME END, player 1 won**").queue();
+                    handleGameEnd();
+                    return;
+                }
+            } else {
+                doMove(i%2);
+                printTheBoard(false);
+                if (!(checkIfGameOver() == null || checkIfGameOver() == "Tie")) {
+                    tictactoeChannel.sendMessage("**GAME END, player 2 won**").queue();
+                    handleGameEnd();
+                    return;
+                }
+            }
+        }
+        tictactoeChannel.sendMessage("**GAME END, it's a tie**").queue();
         handleGameEnd();
         return;
     }
@@ -146,7 +194,7 @@ public class TicTacToeEvent extends ListenerAdapter {
         for (int i = 0; i < board.length; i++) {
             for (int j = 0; j < board.length; j++) {
                 if (board[i][j] == " ") {
-                    board[i][j] = Players[player];
+                    board[i][j] = ai;
                     int score = minimax(board, 0, false);
                     board[i][j] = " ";
                     if (bestScore < score) {
@@ -156,41 +204,30 @@ public class TicTacToeEvent extends ListenerAdapter {
                 }
             }
         }
-        board[Move[0]][Move[1]] = Players[player];
+        board[Move[0]][Move[1]] = ai;
 
     }
 
     public static int minimax(String[][] board, int depth, boolean isMax) {
-        boolean result = checkIfGameOver();
-        if (result) {
-            if (!isMax) {
+        String result = checkIfGameOver();
+        if (result != null) {
+            if (result == "Tie"){
+                return 0;
+            } else if (result == ai) {
                 return 1;
             } else {
                 return -1;
             }
-        }
-        boolean tie = true;
-        for (int i = 0; i < board.length; i++) {
-            for (int j = 0; j < board[i].length; j++) {
-                if (board[i][j] == " ") {
-                    tie = false;
-                }
-            }
-        }
-        if (tie) {
-            return 0;
         }
         if (isMax) {
             int bestScore = Integer.MIN_VALUE;
             for (int i = 0; i < board.length; i++) {
                 for (int j = 0; j < board.length; j++) {
                     if (board[i][j] == " ") {
-                        board[i][j] = Players[1];
+                        board[i][j] = ai;
                         int score = minimax(board, depth + 1, false);
                         board[i][j] = " ";
-                        if (bestScore < score) {
-                            bestScore = score;
-                        }
+                        bestScore = Math.max(bestScore, score);
                     }
                 }
             }
@@ -200,12 +237,10 @@ public class TicTacToeEvent extends ListenerAdapter {
             for (int i = 0; i < board.length; i++) {
                 for (int j = 0; j < board.length; j++) {
                     if (board[i][j] == " ") {
-                        board[i][j] = Players[0];
+                        board[i][j] = human;
                         int score = minimax(board, depth + 1, true);
                         board[i][j] = " ";
-                        if (bestScore > score) {
-                            bestScore = score;
-                        }
+                        bestScore = Math.min(bestScore, score);
                     }
                 }
             }
@@ -214,10 +249,22 @@ public class TicTacToeEvent extends ListenerAdapter {
     }
 
     public static void handleGameEnd() {
+        switch (checkIfGameOver()) {
+            case "X":
+                tictactoeChannel.sendMessage("**GAME END, player 1 won**").queue();
+                break;
+            case "O":
+                tictactoeChannel.sendMessage("**GAME END, player 1 won**").queue();
+                break;
+            case "Tie":
+                tictactoeChannel.sendMessage("**GAME END, it's a tie**").queue();
+                break;
+        }
         PlayersIDs = new String[2];
-        currentNumberOfPlayers = -1;
         isGameInProgress = false;
         sentMessageId = null;
+        human = null;
+        ai = null;
         return;
     }
 
@@ -292,17 +339,17 @@ public class TicTacToeEvent extends ListenerAdapter {
         }
     }
 
-    public static void numberOfPlayers() {
-        while(currentNumberOfPlayers != 1 && currentNumberOfPlayers != 2) {
-            tictactoeChannel.sendMessage("How many players [1/2]?").queue();
+    public static int getNumberFromPlayer() {
+        int numberInput;
+        while(true) {
             String[] message = getResponse().getContentRaw().split("\\s+");  
             if (message.length == 1 && isValidNumber(message[0])) {
-                currentNumberOfPlayers = Integer.parseInt(message[0]);
-                continue;
+                numberInput = Integer.parseInt(message[0]);
+                break;
             }
-            tictactoeChannel.sendMessage("**Wrong number or timeout**").queue();
+            tictactoeChannel.sendMessage("**Wrong number or timeout. Send the number again**").queue();
         }
-        return;
+        return numberInput;
     }
 
     public static Message getResponse() {
@@ -339,10 +386,16 @@ public class TicTacToeEvent extends ListenerAdapter {
         }
         boardString += printInbetweenLine();
         boardString += "```";
-        if (first == true) {
+        if (first) {
+            CompletableFuture<String> future = new CompletableFuture<>();
             tictactoeChannel.sendMessage(boardString).queue(message -> {
-                sentMessageId = message.getId();
+                future.complete(message.getId());
             });
+            try {
+                sentMessageId = future.get();
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+            }
         } else {
             tictactoeChannel.editMessageById(sentMessageId, boardString).queue();
         }
@@ -413,22 +466,33 @@ public class TicTacToeEvent extends ListenerAdapter {
         return "+----------------+----------------+----------------+\n";
     }
 
-    public static boolean checkIfGameOver() {
+    public static String checkIfGameOver() {
         if (checkIfSame(board[0][0], board[1][1], board[2][2])) {
-            return true;
+            return board[1][1];
         }
         if (checkIfSame(board[0][2], board[1][1], board[2][0])) {
-            return true;
+            return board[1][1];
         }
         for (int i = 0; i < board.length; i++) {
             if (checkIfSame(board[i][0], board[i][1], board[i][2])) {
-                return true;
+                return board[i][1];
             }
             if (checkIfSame(board[0][i], board[1][i], board[2][i])) {
-                return true;
+                return board[1][i];
             }
         }
-        return false;
+        boolean tie = true;
+        for (int i = 0; i < board.length; i++) {
+            for (int j = 0; j < board[i].length; j++) {
+                if (board[i][j] == " ") {
+                    tie = false;
+                }
+            }
+        }
+        if (tie) {
+            return "Tie";
+        }
+        return null;
     }
 
     public static boolean checkIfSame(String a, String b, String c) {

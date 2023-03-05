@@ -38,14 +38,14 @@ public class AFKListener extends ListenerAdapter {
         }
     }
 
-    // Method checks if any users are already muted when the bot starts up and saves them in Users map
+    // Method checks if any users are already deafened when the bot starts up and saves them in Users map
     public void checkMutedUsers(Guild Guild) {
         if (afkChannel == null) {
             return;
         }
         for (VoiceChannel voiceChannel : guild.getVoiceChannels()) {
             for (Member member : voiceChannel.getMembers()) {
-                if (member.getVoiceState().isMuted()) {
+                if (member.getVoiceState().isDeafened()) {
                     if (member.getUser().isBot()) {
                         continue;
                     }
@@ -75,12 +75,12 @@ public class AFKListener extends ListenerAdapter {
             removeUser(event.getMember().getUser().getId());
             return;
         }
-        // Saves a user in Users map if user mutes themselves
-        if (event.getMember().getVoiceState().isMuted()) {
+        // Saves a user in Users map if user deafens themselves
+        if (event.getMember().getVoiceState().isDeafened()) {
             saveUser(event.getMember().getUser().getId());
             return;
         }
-        // Removes a user from Users if user unmutes themselves
+        // Removes a user from Users if user undeafens themselves
         removeUser(event.getMember().getUser().getId());
     }
 

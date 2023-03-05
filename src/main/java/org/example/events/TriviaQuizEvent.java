@@ -80,13 +80,24 @@ public class TriviaQuizEvent extends ListenerAdapter {
         // Splitting the message into an array of strings
         String[] message = event.getMessage().getContentRaw().split("\\s+");
         // Checking if the first string in the message array is the trivia command
-        if (message[0].equals(PREFIX + "trivia")) {
+        if (message[0].equals(PREFIX + "trivia") || message[0].equals(PREFIX + "t") ) {
             handleTriviaCommand(message);
             return;
         // Checking if user inputed the right answer in the right text channel
         } else if (isTriviaActive) {
             String userAnswer = event.getMessage().getContentRaw().trim();
-            if (userAnswer.equalsIgnoreCase(trivia[1])) {
+            if (trivia[1].length() == 1) {
+                String[] userAnswerSplit = userAnswer.split("\\s+");
+                for (String word: userAnswerSplit) {
+                    if (word.toLowerCase().equalsIgnoreCase(trivia[1].toLowerCase())) {
+                        triviaChannel.sendMessage("**The answer " + trivia[1] + " is correct**").queue();
+                        numberOfCorrectQuestions++;
+                        isTriviaActive = false;
+                        endQuestion();
+                    }
+                }
+            }
+            if (userAnswer.toLowerCase().equalsIgnoreCase(trivia[1].toLowerCase())) {
                 triviaChannel.sendMessage("**The answer " + trivia[1] + " is correct**").queue();
                 numberOfCorrectQuestions++;
                 isTriviaActive = false;
@@ -127,6 +138,7 @@ public class TriviaQuizEvent extends ListenerAdapter {
                 }
                 switch (message[1]) {
                     // Handles case !trivia stop
+                    case "s":
                     case "stop":
                         if (!isTriviaActive) {
                             triviaChannel.sendMessage("**There is no trivia in progress**").queue();
@@ -138,6 +150,7 @@ public class TriviaQuizEvent extends ListenerAdapter {
                         endQuestion();
                         return;
                         // Handles case !trivia help
+                    case "h":
                     case "help":
                         String helpMessage = String.format("Here are the available commands for %strivia:\n\n" +
                         "%strivia [category (default - random)] [number of games (default - 3)]- Starts a new trivia game. " +
@@ -150,6 +163,7 @@ public class TriviaQuizEvent extends ListenerAdapter {
                         triviaChannel.sendMessage(helpMessage).queue();
                         return;
                         // Handles case !trivia next
+                    case "n":
                     case "next":
                         if (!isTriviaActive) {
                             triviaChannel.sendMessage("**There is no trivia in progress**").queue();
