@@ -22,11 +22,11 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
 public class TriviaQuizEvent extends ListenerAdapter {
 
-    // Define constant variables for the API_URL, API_KEY, PREFIX, POSSIBLE_CATEGORIES
+    // Define constant variables
     private static final String API_URL = "https://trivia-by-api-ninjas.p.rapidapi.com/v1/trivia?";
     private static String API_KEY;
     private static String GUILD_ID;
-    private static String TRIVIA_CHANNERL_ID;
+    private static String TRIVIA_CHANNEL_ID;
     private static String PREFIX;
     private static Guild guild;
     private TextChannel triviaChannel;
@@ -50,10 +50,10 @@ public class TriviaQuizEvent extends ListenerAdapter {
     private String[] trivia = new String[]{null, null};
 
     // Constructor that initializes the value of API_KEY
-    public TriviaQuizEvent(String API_KEY, String GUILD_ID, String TRIVIA_CHANNERL_ID) {
+    public TriviaQuizEvent(String API_KEY, String GUILD_ID, String TRIVIA_CHANNEL_ID) {
         TriviaQuizEvent.API_KEY = API_KEY;
         TriviaQuizEvent.GUILD_ID = GUILD_ID;
-        TriviaQuizEvent.TRIVIA_CHANNERL_ID = TRIVIA_CHANNERL_ID;
+        TriviaQuizEvent.TRIVIA_CHANNEL_ID = TRIVIA_CHANNEL_ID;
     }
 
     // Define a static method for updating the command prefix
@@ -65,7 +65,7 @@ public class TriviaQuizEvent extends ListenerAdapter {
     @Override
     public void onReady(ReadyEvent event) {
         guild = event.getJDA().getGuildById(GUILD_ID);
-        triviaChannel = guild.getTextChannelById(TRIVIA_CHANNERL_ID);
+        triviaChannel = guild.getTextChannelById(TRIVIA_CHANNEL_ID);
     }
 
     // Overriding the onMessageReceived method to handle incoming messages
@@ -106,7 +106,7 @@ public class TriviaQuizEvent extends ListenerAdapter {
         }
     }
 
-    // Method handles trivia comands
+    // Method handles trivia commands
     public void handleTriviaCommand(String[] message) {
         switch (message.length) {
             // Handles case of !trivia
@@ -152,11 +152,11 @@ public class TriviaQuizEvent extends ListenerAdapter {
                         // Handles case !trivia help
                     case "h":
                     case "help":
-                        String helpMessage = String.format("Here are the available commands for %strivia:\n\n" +
+                        String helpMessage = String.format("Here are the available commands for %strivia(t):\n\n" +
                         "%strivia [category (default - random)] [number of games (default - 3)]- Starts a new trivia game. " +
-                        "These are the categories: *%s.*\n%strivia next - Ends the current trivia question and asks a new question " +
+                        "These are the categories: *%s.*\n%strivia next(n) - Ends the current trivia question and asks a new question " +
                         "in the same trivia game. If there are no more questions in current trivia game it starts a new one (with a previous category).\n" +
-                        "%strivia stop - Stops the current trivia game.\n%strivia help - Shows this help message.\n" +
+                        "%strivia stop(s) - Stops the current trivia game.\n%strivia help(h) - Shows this help message.\n" +
                         "([] are not needed in commands)\n\nDuring a trivia game, you can answer questions by typing your answer " +
                         "in the chat. The bot will let you know if your answer is correct or incorrect.\n\n" + 
                         "Good luck and have fun!", PREFIX, PREFIX, Arrays.deepToString(POSSIBLE_CATEGORIES), PREFIX, PREFIX, PREFIX);

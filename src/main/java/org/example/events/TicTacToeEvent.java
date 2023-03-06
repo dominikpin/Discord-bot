@@ -13,19 +13,17 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
 public class TicTacToeEvent extends ListenerAdapter {
     
-    //private static String[][] board = new String[3][3];
-    private static String[][] board = {{"O", "X", "O"}, 
-                                       {"X", "O", "X"},
-                                       {"X", "O", "X"}
-                                      };
+    // Define constant variables
+    private static String[][] board = new String[3][3];
     private static String BOT_ID;
     private static String GUILD_ID;
-    private static String TICTACTOE_CHANNERL_ID;
+    private static String TICTACTOE_CHANNEL_ID;
     private static String PREFIX;
     private static Guild guild;
     private static TextChannel tictactoeChannel;
     private static String[] Players = {"X", "O"};
     
+    // Define variables
     private static String[] PlayersIDs = new String[2];
     private static String ai;
     private static String human;
@@ -33,9 +31,9 @@ public class TicTacToeEvent extends ListenerAdapter {
     private static String sentMessageId;
 
     // Constructor that initializes the value of API_KEY
-    public TicTacToeEvent(String GUILD_ID, String TICTACTOE_CHANNERL_ID, String BOT_ID) {
+    public TicTacToeEvent(String GUILD_ID, String TICTACTOE_CHANNEL_ID, String BOT_ID) {
         TicTacToeEvent.GUILD_ID = GUILD_ID;
-        TicTacToeEvent.TICTACTOE_CHANNERL_ID = TICTACTOE_CHANNERL_ID;
+        TicTacToeEvent.TICTACTOE_CHANNEL_ID = TICTACTOE_CHANNEL_ID;
         TicTacToeEvent.BOT_ID = BOT_ID;
     }
 
@@ -44,15 +42,17 @@ public class TicTacToeEvent extends ListenerAdapter {
         PREFIX = newPrefix;
     }
 
+    // Method is called when the bot is ready
     @Override
     public void onReady(ReadyEvent event) {
         guild = event.getJDA().getGuildById(GUILD_ID);
-        tictactoeChannel = guild.getTextChannelById(TICTACTOE_CHANNERL_ID);
+        tictactoeChannel = guild.getTextChannelById(TICTACTOE_CHANNEL_ID);
     }
 
+    // Overriding the onMessageReceived method to handle incoming messages
     @Override
     public void onMessageReceived(MessageReceivedEvent event) {
-
+        
         if(!event.getChannel().asTextChannel().equals(tictactoeChannel)){
             return;
         }
@@ -68,23 +68,29 @@ public class TicTacToeEvent extends ListenerAdapter {
         }
     }
 
+    // Method handles TicTacToe commands
     public static void handleTTTCommand(String[] message) {
+        // Returns if command is not !TTT [help, newgame, other]
         if (message.length != 2){
             tictactoeChannel.sendMessage("**Wrong command**").queue();
             return;
         }
         switch (message[1].toLowerCase()) {
+            // Handles case !TTT help
             case "help":
                 String helpMessage = String.format("Here are the available commands for %sTTT:\n\n" +
-                "%sTTT newGame - Starts a new Tictactoe game.\n" + 
-                "%sTTT stop - *feture to be added*\n\n" + 
+                "%sTTT newGame(n) - Starts a new Tictactoe game.\n" + 
+                "%sTTT stop - *Upcoming feature*\n\n" + 
                 "Good luck and have fun!", PREFIX, PREFIX,PREFIX);
                 tictactoeChannel.sendMessage(helpMessage).queue();
                 return;
+            // Handles case !TTT help (Upcoming feature)
             /*case "stop":
                 tictactoeChannel.sendMessage("**Tictactoe game Stoped**").queue();
 
                 return;*/
+            // Handles case !TTT newGame
+            case "n":
             case "newgame":
                 if (isGameInProgress) {
                     tictactoeChannel.sendMessage("**Game is in progress**").queue();
@@ -92,6 +98,7 @@ public class TicTacToeEvent extends ListenerAdapter {
                 }
                 startNewGame();
                 return;
+            // Handles case !TTT other
             default:
                 tictactoeChannel.sendMessage("**Wrong command**").queue();
                 return;
@@ -99,9 +106,16 @@ public class TicTacToeEvent extends ListenerAdapter {
         
     }
 
+    // Method starts a new game
     public static void startNewGame() {
-        tictactoeChannel.sendMessage("**You will have 5 seconds to input answers (or I will ask you again).**").queue();
+        tictactoeChannel.sendMessage("You will have 5 seconds to input answers (or I will ask you again).").queue();
+        try {
+            TimeUnit.SECONDS.sleep(2);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         resetTheBoard();
+        deleteLastBotMessage();
         tictactoeChannel.sendMessage("How many players [1/2]?").queue();
         int currentNumberOfPlayers;
         while (true) {
@@ -110,6 +124,7 @@ public class TicTacToeEvent extends ListenerAdapter {
                 break;
             }
         }
+        deleteLastBotMessage();
         if (currentNumberOfPlayers == 1) {
             handleGameForOne();
         } else {
@@ -117,8 +132,9 @@ public class TicTacToeEvent extends ListenerAdapter {
         }
     }
 
+    // Method starts a new game for one
     public static void handleGameForOne() { 
-        tictactoeChannel.sendMessage("Which player do you want to play as?").queue();
+        tictactoeChannel.sendMessage("Which player do you want to play as [1/2]?").queue();
         int whichPlayer;
         while (true) {
             whichPlayer = getNumberFromPlayer();
@@ -126,6 +142,7 @@ public class TicTacToeEvent extends ListenerAdapter {
                 break;
             }
         }
+        deleteLastBotMessage();
         human = Players[whichPlayer-1];
         PlayersIDs[whichPlayer-1] = getResponse().getAuthor().getId();
         printTheBoard(true);
@@ -150,16 +167,25 @@ public class TicTacToeEvent extends ListenerAdapter {
         return;
     }
 
+    // Method does a move for bot or asks player for their move
     public static void doMove(int player) {
         if (PlayersIDs[player] == null) {
             ai = Players[player];
             botMove(player);
+            try {
+                TimeUnit.SECONDS.sleep(2);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            deleteLastBotMessage();
             return;
         }
-        int[] input = getInputFromPlayer(player);
+        int[] input = getCoordinatesFromPlayer(player);
+        deleteLastBotMessage();
         board[input[0]][input[1]] = Players[player];
     }
 
+    // Method starts a new game for two
     public static void handleGameForTwo() { 
         getPlayer(0);
         getPlayer(1);
@@ -168,26 +194,24 @@ public class TicTacToeEvent extends ListenerAdapter {
             if (i%2 == 0) {
                 doMove(i%2);
                 printTheBoard(false);
-                if (!(checkIfGameOver() == null || checkIfGameOver() == "Tie")) {
-                    tictactoeChannel.sendMessage("**GAME END, player 1 won**").queue();
+                if (checkIfGameOver() != null) {
                     handleGameEnd();
                     return;
                 }
             } else {
                 doMove(i%2);
                 printTheBoard(false);
-                if (!(checkIfGameOver() == null || checkIfGameOver() == "Tie")) {
-                    tictactoeChannel.sendMessage("**GAME END, player 2 won**").queue();
+                if (checkIfGameOver() != null) {
                     handleGameEnd();
                     return;
                 }
             }
         }
-        tictactoeChannel.sendMessage("**GAME END, it's a tie**").queue();
         handleGameEnd();
         return;
     }
 
+    // Method calculates a bot move
     public static void botMove(int player) {
         int bestScore = Integer.MIN_VALUE;
         int [] Move = new int[2];
@@ -205,9 +229,10 @@ public class TicTacToeEvent extends ListenerAdapter {
             }
         }
         board[Move[0]][Move[1]] = ai;
-
+        tictactoeChannel.sendMessage("Bot played " + (Move[0] + 1) + ", " + (Move[1] + 1) + "." ).complete();
     }
 
+    // Method is minimax algorithm for calculating bot moves
     public static int minimax(String[][] board, int depth, boolean isMax) {
         String result = checkIfGameOver();
         if (result != null) {
@@ -248,6 +273,7 @@ public class TicTacToeEvent extends ListenerAdapter {
         }
     }
 
+    // Method ends a game and resets variables
     public static void handleGameEnd() {
         switch (checkIfGameOver()) {
             case "X":
@@ -268,29 +294,34 @@ public class TicTacToeEvent extends ListenerAdapter {
         return;
     }
 
-    public static int[] getInputFromPlayer(int playerNum) {
+    // Method gets coordinate input from player
+    public static int[] getCoordinatesFromPlayer(int playerNum) {
         Message message;
         int[] coordinates = null;
         while (true) {
             if (coordinates == null) {
-                tictactoeChannel.sendMessage("Player " + (playerNum + 1)+ " input your choice like \"x, y\": ").queue();
+                tictactoeChannel.sendMessage("Player " + (playerNum + 1)+ " input your choice like \"y, x\": ").queue();
             } else {
-                tictactoeChannel.sendMessage("Invalid input, player " + (playerNum + 1) + " input your choice like \"x, y\": ").queue();
+                deleteLastBotMessage();
+                tictactoeChannel.sendMessage("Invalid input, player " + (playerNum + 1) + " input your choice like \"y, x\": ").queue();
             }
             message = getResponse();
             String Author = message.getAuthor().getId();
+            coordinates = getNumsFromString(message.getContentRaw());
             if (!Author.equals(PlayersIDs[playerNum])) {
-                tictactoeChannel.sendMessage("**Timeout**").queue();
+                deleteLastBotMessage();
+                tictactoeChannel.sendMessage("**Timeout!**").complete();
                 continue;
             }
-            coordinates = getNumsFromString(message.getContentRaw());
             if (coordinates.length == 2 && checkIfEmpty(coordinates)) {
+                deleteLastPlayerMessage(playerNum);
                 break;
             }
         }
         return coordinates;
     }
 
+    // Method checks if place is empty on the board
     public static boolean checkIfEmpty(int[] coordinates) {
         if (board[coordinates[0]][coordinates[1]] == " ") {
             return true;
@@ -298,25 +329,26 @@ public class TicTacToeEvent extends ListenerAdapter {
         return false;
     }
 
+    // Method converts message to coordinates
     public static int[] getNumsFromString(String message) {
-        String[] coordinatsString = message.split(", ");
-        int[] coordinatsInt = new int[coordinatsString.length];
+        String[] coordinatesString = message.split(", ");
+        int[] coordinatesInt = new int[coordinatesString.length];
 
         
-        for (int i = 0; i < coordinatsString.length; i++) {
+        for (int i = 0; i < coordinatesString.length; i++) {
             try {
-                coordinatsInt[i] = Integer.parseInt(coordinatsString[i])-1;
-                if (Integer.parseInt(coordinatsString[i]) < 1 || Integer.parseInt(coordinatsString[i]) > 3) {
+                coordinatesInt[i] = Integer.parseInt(coordinatesString[i])-1;
+                if (Integer.parseInt(coordinatesString[i]) < 1 || Integer.parseInt(coordinatesString[i]) > 3) {
                     return new int[] {};
                 }
             } catch (NumberFormatException e) {
-                System.out.println("Error in input");
                 return new int[] {};
             }
         }
-        return coordinatsInt;
+        return coordinatesInt;
     }
-
+    
+    // Method gets ID of a player
     public static void getPlayer(int playerNum) {
         while (PlayersIDs[playerNum] == null) {
             tictactoeChannel.sendMessage("Who is playing with " + Players[playerNum] + "? Type anything.").queue();
@@ -331,6 +363,7 @@ public class TicTacToeEvent extends ListenerAdapter {
         }
     }
 
+    // Method resets the board
     public static void resetTheBoard() {
         for (int i = 0; i < board.length; i++) {
             for (int j = 0; j < board[i].length; j++) {
@@ -339,19 +372,22 @@ public class TicTacToeEvent extends ListenerAdapter {
         }
     }
 
+    // Method gets number 1/2 from player
     public static int getNumberFromPlayer() {
         int numberInput;
         while(true) {
-            String[] message = getResponse().getContentRaw().split("\\s+");  
+            String[] message = getResponse().getContentRaw().split("\\s+");
             if (message.length == 1 && isValidNumber(message[0])) {
                 numberInput = Integer.parseInt(message[0]);
                 break;
             }
-            tictactoeChannel.sendMessage("**Wrong number or timeout. Send the number again**").queue();
+            deleteLastBotMessage();
+            tictactoeChannel.sendMessage("Wrong number or timeout. Send the number again [1/2].").queue();
         }
         return numberInput;
     }
 
+    // Method gets response from a player
     public static Message getResponse() {
         try {
             TimeUnit.SECONDS.sleep(5);
@@ -359,6 +395,36 @@ public class TicTacToeEvent extends ListenerAdapter {
             e.printStackTrace();
         }
         return tictactoeChannel.getHistory().retrievePast(1).complete().get(0);
+    }
+
+    // Method deletes last bot message
+    public static void deleteLastBotMessage() {
+        Message lastBotMessage = null;
+        for (Message message : tictactoeChannel.getIterableHistory().cache(false)) {
+            if (message.getAuthor().getId().equals(BOT_ID)) {
+                lastBotMessage = message;
+                break;
+            }
+        }
+        if (lastBotMessage != null) {
+            lastBotMessage.delete().complete();
+        }
+        return;
+    }
+
+    // Method deletes last player message
+    public static void deleteLastPlayerMessage(int player) {
+        Message lastPlayerMessage = null;
+        for (Message message : tictactoeChannel.getIterableHistory().cache(false)) {
+            if (message.getAuthor().getId().equals(PlayersIDs[player])) {
+                lastPlayerMessage = message;
+                break;
+            }
+        }
+        if (lastPlayerMessage != null) {
+            lastPlayerMessage.delete().complete();
+        }
+        return;
     }
 
     // Method checks if number is valid
@@ -372,6 +438,7 @@ public class TicTacToeEvent extends ListenerAdapter {
         return false;
     }
 
+    // Method prints a board
     public static void printTheBoard(boolean first) {
         String boardString = "```\n";
         for(int i = 0; i < board.length; i++) {
@@ -401,36 +468,31 @@ public class TicTacToeEvent extends ListenerAdapter {
         }
     }
 
+    // Method returns line of O and X
     public static String printLineOX(int line, String sign) {
         if (sign == "O") {
             switch (line) {
                 case 0:
-                    return "      *  *      ";
-                case 1:
-                    return "   *        *   ";
-                case 2:
-                    return "  *          *  ";
-                case 3:
-                    return "  *          *  ";
-                case 4:
-                    return "   *        *   ";
                 case 5:
                     return "      *  *      ";
+                case 1:
+                case 4:
+                    return "   *        *   ";
+                case 2:
+                case 3:
+                    return "  *          *  ";
             }
         } else if (sign == "X") {
             switch (line) {
                 case 0:
-                    return "   *        *   ";
-                case 1:
-                    return "     *    *     ";
-                case 2:
-                    return "       **       ";
-                case 3:
-                    return "       **       ";
-                case 4:
-                    return "     *    *     ";
                 case 5:
                     return "   *        *   ";
+                case 1:
+                case 4:
+                    return "     *    *     ";
+                case 2:
+                case 3:
+                    return "       **       ";
             }
         }
         switch (line) {
@@ -443,29 +505,32 @@ public class TicTacToeEvent extends ListenerAdapter {
                 return "                ";
         }
         return "";
-
-        /*tictactoeChannel.sendMessage("```\n" +
-                                "      *  *      \n" +
-                                "   *        *   \n" +
-                                "  *          *  \n" +
-                                "  *          *  \n" +
-                                "   *        *   \n" +
-                                "      *  *      \n" +
-                                "```").queue();
-        tictactoeChannel.sendMessage("```\n" +
-                                "   *        *   \n" +
-                                "     *    *     \n" +
-                                "       **       \n" +
-                                "       **       \n" +
-                                "     *    *     \n" +
-                                "   *        *   \n" +
-                                "```").queue();*/
     }
 
+    /*
+
+        *  *      
+     *        *   
+    *          *  
+    *          *  
+     *        *   
+        *  *      
+
+     *        *   
+       *    *     
+         **       
+         **       
+       *    *     
+     *        *   
+    
+     */
+
+    // Method returns line between Xs and Os
     public static String printInbetweenLine() {
         return "+----------------+----------------+----------------+\n";
     }
 
+    // Method checks if game is over
     public static String checkIfGameOver() {
         if (checkIfSame(board[0][0], board[1][1], board[2][2])) {
             return board[1][1];
@@ -495,6 +560,7 @@ public class TicTacToeEvent extends ListenerAdapter {
         return null;
     }
 
+    // Method checks if 3 strings are same as " "
     public static boolean checkIfSame(String a, String b, String c) {
         return (a == b && b == c && a != " ");
     }

@@ -15,8 +15,9 @@ public class Main {
     private static final String LOCK_FILE_PATH = dotenv.get("LOCK_FILE_PATH");
     private static final String TOKEN = dotenv.get("DISCORD_TOKEN");
     private static final String AFK_CHANNEL_ID = dotenv.get("AFK_CHANNEL_ID");
-    private static final String TRIVIA_CHANNERL_ID = dotenv.get("TRIVIA_CHANNERL_ID");
-    private static final String TICTACTOE_CHANNERL_ID = dotenv.get("TICTACTOE_CHANNERL_ID");
+    private static final String TRIVIA_CHANNEL_ID = dotenv.get("TRIVIA_CHANNEL_ID");
+    private static final String TICTACTOE_CHANNEL_ID = dotenv.get("TICTACTOE_CHANNEL_ID");
+    private static final String FOURINAROW_CHANNEL_ID = dotenv.get("FOURINAROW_CHANNEL_ID");
     private static final String GUILD_ID = dotenv.get("GUILD_ID");
     private static final String API_KEY = dotenv.get("API_KEY");
     private static final String OWNER_ID = dotenv.get("OWNER_ID");
@@ -45,7 +46,7 @@ public class Main {
         JDABuilder jdaBuilder = JDABuilder.createDefault(TOKEN);
         jdaBuilder
                 .enableIntents(GatewayIntent.MESSAGE_CONTENT, GatewayIntent.GUILD_MESSAGES)
-                .addEventListeners(new ReadyEventListener(), new UrbanDictionaryBotEvent(API_KEY), new DeafenListener(ZALBIK_ID), new AFKListener(AFK_CHANNEL_ID, GUILD_ID),  new ShutdownBotCommand(OWNER_ID), new TriviaQuizEvent(API_KEY, GUILD_ID, TRIVIA_CHANNERL_ID), new PrefixChangeEvent(PREFIX_FILE_PATH), new TicTacToeEvent(GUILD_ID, TICTACTOE_CHANNERL_ID, BOT_ID))
+                .addEventListeners(new ReadyEventListener(), new UrbanDictionaryBotEvent(API_KEY), new DeafenListener(ZALBIK_ID), new AFKListener(AFK_CHANNEL_ID, GUILD_ID),  new ShutdownBotCommand(OWNER_ID), new TriviaQuizEvent(API_KEY, GUILD_ID, TRIVIA_CHANNEL_ID), new PrefixChangeEvent(PREFIX_FILE_PATH), new TicTacToeEvent(GUILD_ID, TICTACTOE_CHANNEL_ID, BOT_ID), new FourInARowEvent(GUILD_ID, FOURINAROW_CHANNEL_ID, BOT_ID))
                 .build();
 
         // Delete lock file when the bot is shut down
